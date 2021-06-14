@@ -20,40 +20,71 @@ public class Statement {
     }
 
     public String show() {
-        int totalAmount = 0;
-        int volumeCredits = 0;
-        String result = String.format("Statement for %s", invoice.getCustomer());
-        StringBuilder stringBuilder = new StringBuilder(result);
-
-        for (Performance performance : invoice.getPerformances()) {
-            Play play = plays.get(performance.getPlayId());
-            int thisAmount = 0;
-            switch (play.getType()) {
-                case "tragedy":
-                    thisAmount = getTragedyAmount(performance);
-                    break;
-                case "comedy":
-                    thisAmount = getComedyAmount(performance);
-                    break;
-                default:
-                    throw new RuntimeException("unknown type:" + play.getType());
-            }
-
-            if ("tragedy".equals(play.getType())) {
-                volumeCredits += getTragedyVolumeCredits(performance);
-            }
-
-            if ("comedy".equals(play.getType())) {
-                volumeCredits += getComedyVolumeCredits(performance);
-            }
-
-            stringBuilder.append(String.format(" %s: %s (%d seats)\n", play.getName(), formatUSD(thisAmount), performance.getAudience()));
-            totalAmount += thisAmount;
-        }
-        stringBuilder.append(String.format("Amount owed is %s\n", formatUSD(totalAmount)));
-        stringBuilder.append(String.format("You earned %s credits\n", volumeCredits));
+        StringBuilder stringBuilder = new StringBuilder();
+        stringBuilder.append(String.format("Statement for %s", invoice.getCustomer()));
+        stringBuilder.append(formatPerformances());
+        stringBuilder.append(String.format("Amount owed is %s\n", formatUSD(getTotalAmount())));
+        stringBuilder.append(String.format("You earned %s credits\n", getTotalVolumeCredits()));
         return stringBuilder.toString();
     }
+
+    private StringBuilder formatPerformances() {
+        StringBuilder stringBuilder = new StringBuilder();
+        for (Performance performance : invoice.getPerformances()) {
+            Play play = plays.get(performance.getPlayId());
+            stringBuilder.append(String.format(" %s: %s (%d seats)\n", play.getName(), formatUSD(getThisAmount(performance, play)), performance.getAudience()));
+        }
+        return stringBuilder;
+    }
+
+    private int getTotalVolumeCredits() {
+        int volumeCredits = 0;
+        for (Performance performance : invoice.getPerformances()) {
+            Play play = plays.get(performance.getPlayId());
+            volumeCredits += getThisVolumeCredits(performance, play);
+        }
+        return volumeCredits;
+    }
+
+    private double getThisVolumeCredits(Performance performance, Play play) {
+        double VolumeCredits = 0;
+        switch (play.getType()) {
+            case "tragedy":
+                VolumeCredits = getTragedyVolumeCredits(performance);
+                break;
+            case "comedy":
+                VolumeCredits = getComedyVolumeCredits(performance);
+                break;
+            default:
+                return VolumeCredits;
+        }
+        return VolumeCredits;
+    }
+
+    private int getTotalAmount() {
+        int result = 0;
+        for (Performance performance : invoice.getPerformances()) {
+            Play play = plays.get(performance.getPlayId());
+            result += getThisAmount(performance, play);
+        }
+        return result;
+    }
+
+    private int getThisAmount(Performance performance, Play play) {
+        int thisAmount;
+        switch (play.getType()) {
+            case "tragedy":
+                thisAmount = getTragedyAmount(performance);
+                break;
+            case "comedy":
+                thisAmount = getComedyAmount(performance);
+                break;
+            default:
+                throw new RuntimeException("unknown type:" + play.getType());
+        }
+        return thisAmount;
+    }
+
 
     private double getComedyVolumeCredits(Performance performance) {
         return Math.max(performance.getAudience() - 30, 0) + Math.floor(performance.getAudience() / 5);
