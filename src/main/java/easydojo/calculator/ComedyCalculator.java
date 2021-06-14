@@ -3,7 +3,7 @@ package easydojo.calculator;
 
 import easydojo.model.Performance;
 
-public class ComedyCalculator implements IPerformanceCalculator {
+public class ComedyCalculator extends AbstractPerformanceCalculator {
     public ComedyCalculator() {
     }
 
