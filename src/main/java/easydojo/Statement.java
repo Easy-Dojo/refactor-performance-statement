@@ -1,6 +1,9 @@
 package easydojo;
 
 
+import easydojo.calculator.ComedyCalculator;
+import easydojo.calculator.IPerformanceCalculator;
+import easydojo.calculator.TragedyCalculator;
 import easydojo.model.Invoice;
 import easydojo.model.Performance;
 import easydojo.model.Play;
@@ -32,7 +35,7 @@ public class Statement {
         StringBuilder stringBuilder = new StringBuilder();
         for (Performance performance : invoice.getPerformances()) {
             Play play = plays.get(performance.getPlayId());
-            stringBuilder.append(String.format(" %s: %s (%d seats)\n", play.getName(), formatUSD(getThisAmount(performance, play)), performance.getAudience()));
+            stringBuilder.append(String.format(" %s: %s (%d seats)\n", play.getName(), formatUSD(getPerformanceCalculator(play).getAmount(performance)), performance.getAudience()));
         }
         return stringBuilder;
     }
@@ -41,79 +44,32 @@ public class Statement {
         int volumeCredits = 0;
         for (Performance performance : invoice.getPerformances()) {
             Play play = plays.get(performance.getPlayId());
-            volumeCredits += getThisVolumeCredits(performance, play);
+            volumeCredits += getPerformanceCalculator(play).getVolumeCredits(performance);
         }
         return volumeCredits;
     }
 
-    private double getThisVolumeCredits(Performance performance, Play play) {
-        double VolumeCredits = 0;
-        switch (play.getType()) {
-            case "tragedy":
-                VolumeCredits = getTragedyVolumeCredits(performance);
-                break;
-            case "comedy":
-                VolumeCredits = getComedyVolumeCredits(performance);
-                break;
-            default:
-                return VolumeCredits;
-        }
-        return VolumeCredits;
-    }
 
     private int getTotalAmount() {
         int result = 0;
         for (Performance performance : invoice.getPerformances()) {
             Play play = plays.get(performance.getPlayId());
-            result += getThisAmount(performance, play);
+            result += getPerformanceCalculator(play).getAmount(performance);
         }
         return result;
     }
 
-    private int getThisAmount(Performance performance, Play play) {
-        int thisAmount;
-        switch (play.getType()) {
-            case "tragedy":
-                thisAmount = getTragedyAmount(performance);
-                break;
-            case "comedy":
-                thisAmount = getComedyAmount(performance);
-                break;
-            default:
-                throw new RuntimeException("unknown type:" + play.getType());
+    private IPerformanceCalculator getPerformanceCalculator(Play play) {
+        if ("tragedy".equals(play.getType())) {
+            return new TragedyCalculator();
         }
-        return thisAmount;
-    }
-
-
-    private double getComedyVolumeCredits(Performance performance) {
-        return Math.max(performance.getAudience() - 30, 0) + Math.floor(performance.getAudience() / 5);
-    }
-
-    private int getTragedyVolumeCredits(Performance performance) {
-        return Math.max(performance.getAudience() - 30, 0);
+        if ("comedy".equals(play.getType())) {
+            return new ComedyCalculator();
+        }
+        return null;
     }
 
     private String formatUSD(int amount) {
         return NumberFormat.getCurrencyInstance(new Locale("en", "US")).format(amount / 100);
-    }
-
-    private int getComedyAmount(Performance performance) {
-        int thisAmount;
-        thisAmount = 30000;
-        if (performance.getAudience() > 20) {
-            thisAmount += 10000 + 500 *(performance.getAudience() - 20);
-        }
-        thisAmount += 300 * performance.getAudience();
-        return thisAmount;
-    }
-
-    private int getTragedyAmount(Performance performance) {
-        int thisAmount;
-        thisAmount = 40000;
-        if (performance.getAudience() > 30) {
-            thisAmount += 1000 * (performance.getAudience() - 30);
-        }
-        return thisAmount;
     }
 }
